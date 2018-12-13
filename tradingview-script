@@ -1,0 +1,92 @@
+//@version3
+ ////////////////////////////////////////////////   ID   //////////////////////////////////////
+study(title="Wavey Truecall", shorttitle="WaveyTrue")
+
+ ////////////////////////////////////////////////   INPUTS   //////////////////////////////////////
+n1          = input( 10 , "Channel Length"          )
+n2          = input( 3 , "Average Length"          )
+SWEEP       = input( 15 , "Entry Sweep Length"      )
+osLevel3    = input(-90, "oversold"                )
+obLevel1    = input(105, "overboughtlevel")
+
+ ////////////////////////////////////////////////   FUNCTIONS   //////////////////////////////////////
+ 
+//                                                              MULTIFIREFIX
+//▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒    
+multifirefix(SOURCE)=>    
+    OUTPUT              = fixnan    ( SOURCE    and not SOURCE[1]               ? 1         : SOURCE[1]     and not SOURCE      ?  0     : na   )
+    
+//                                                             PULSE
+//▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒    
+pulse(SOURCE)=>
+    OUTPUT              = iff       ( SOURCE    and not SOURCE[1]               , 1         , 0 )
+
+
+ ////////////////////////////////////////////////   CALCULATIONS   //////////////////////////////////////
+
+ap          = hlc3 
+esa         = ema(ap, n1)
+d           = ema(abs(ap - esa), n1)
+ci          = (ap - esa) / (0.015 * d)
+tci         = ema(ci, n2)
+
+wt1         = tci
+wt2         = sma(wt1,4)
+
+ ////////////////////////////////////////////////   CONDITIONS   //////////////////////////////////////
+ // Here you can add analythical conditions to disable/lower thresholds depending on conditions that are relevant
+ 
+s2 = crossover(wt1, wt2) ? avg(wt1,wt2): na
+s5 = (s2 < osLevel3)
+
+a1= cross(wt2, wt1)  ? avg(wt2,wt1): na
+a12 = (a1 > obLevel1)
+
+
+ ////////////////////////////////////////////////   ENTRIES  ////////////////////////////////////// 
+PULSE_LONG                 = pulse      ( iff           ( s5 > 0    , 1 , 0 )   )
+SWEEP_LONG                 = sma        ( PULSE_LONG                , SWEEP )   > 0                     ? 1         : 0
+LONG                       = offset     ( SWEEP_LONG                , 1     )   < PULSE_LONG            ? 1         : 0 
+
+PULSE_SHORT                 = pulse     ( iff           ( a12 > 0    , 1 , 0 )  )
+SWEEP_SHORT                 = sma       ( PULSE_SHORT               , SWEEP )   > 0                     ? 1         : 0
+SHORT                       = offset    ( SWEEP_SHORT               , 1     )   < PULSE_SHORT           ? 1         : 0 
+
+ ////////////////////////////////////////////////   EXECUTIONS   //////////////////////////////////////
+
+
+
+ ////////////////////////////////////////////////   GRAPHICAL   //////////////////////////////////////
+ 
+plotshape(LONG, title="Long", style=shape.triangleup, location=location.bottom, color=lime, size=size.tiny)
+alertcondition(LONG  , title="Buynow")
+plotshape(SHORT, title="short", style=shape.triangledown, location=location.top, color=red, size=size.tiny)
+alertcondition(SHORT  , title="SELLNOW")
+
+
+plot(0, color=gray, transp=100)
+plot(osLevel3, color=gray, transp=5)
+plot(obLevel1, color=gray, transp=5)
+
+
+plot(wt1, color=aqua, linewidth=1, style=3)
+plot(wt2, color=green, linewidth=1)
+plot(wt1-wt2, color=purple, style=area, transp=70)
+
+barColour2 = (LONG) ? yellow : na
+barcolor(color=barColour2)
+
+barColour3 = (SHORT) ? fuchsia : na
+barcolor(color=barColour3)
+
+
+
+
+
+
+
+bgcolor(SWEEP_LONG ? #446666 : SWEEP_SHORT ? #666644 : #222222 , transp=100 )
+
+
+
+
